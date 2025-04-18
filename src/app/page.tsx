@@ -37,7 +37,7 @@ type Activity = {
   student: string;
   location: string;
   time: string;
-  type: "check-in" | "check-out";
+  type: "check-out" | "check-in";
 };
 
 export default function Home() {
@@ -186,7 +186,7 @@ export default function Home() {
                 activityLog.map((activity, index) => (
                   <div key={index} className="mb-2">
                     <p className="text-sm">
-                      {activity.student} - {activity.type === "check-in" ? "Checked in to" : "Checked out from"}{" "}
+                      {activity.student} - {activity.type === "check-in" ? "Checked in from" : "Checked out to"}{" "}
                       {activity.location} at {activity.time}
                     </p>
                     {index !== activityLog.length - 1 && <Separator />}
@@ -196,6 +196,29 @@ export default function Home() {
             </div>
           </ScrollArea>
         </CardContent>
+        <Button
+          onClick={() => {
+            const csvContent =
+              "Student,Type,Location,Time\n" +
+              activityLog
+                .map(
+                  (activity) =>
+                    `${activity.student},${activity.type},${activity.location},${activity.time}`
+                )
+                .join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "activity_log.csv";
+            link.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="mt-4 bg-muted hover:bg-muted-foreground text-muted-foreground"
+        >
+          Export as CSV
+        </Button>
+
       </Card>
     </div>
   );

@@ -60,6 +60,36 @@ export default function Home() {
   }, [activityLog]);
 
   const handleCheckIn = () => {
+    if (!selectedStudent) {
+      toast({
+        title: "Error",
+        description: "Please select a student.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    const newActivity: Activity = {
+      student: selectedStudent,
+      location: "Classroom",
+      time: time,
+      type: "check-in",
+    };
+
+    setActivityLog((prevLog) => [newActivity, ...prevLog]);
+    setSelectedStudent(null);
+    setSelectedLocation(null);
+    setCheckedOut(false);
+
+    toast({
+      title: "Check-in Successful",
+      description: `${selectedStudent} checked in at ${time}.`,
+    });
+  };
+
+  const handleCheckOut = () => {
     if (!selectedStudent || !selectedLocation) {
       toast({
         title: "Error",
@@ -75,46 +105,24 @@ export default function Home() {
       student: selectedStudent,
       location: selectedLocation,
       time: time,
-      type: "check-in",
-    };
-
-    setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setSelectedStudent(null);
-    setSelectedLocation(null);
-
-    toast({
-      title: "Check-in Successful",
-      description: `${selectedStudent} checked in to ${selectedLocation} at ${time}.`,
-    });
-  };
-
-  const handleCheckOut = () => {
-    if (!selectedStudent || checkedOut) {
-      toast({
-        title: "Error",
-        description: "Please select a student.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const now = new Date();
-    const time = now.toLocaleTimeString();
-    const newActivity: Activity = {
-      student: selectedStudent,
-      location: "Classroom",
-      time: time,
       type: "check-out",
     };
 
     setActivityLog((prevLog) => [newActivity, ...prevLog]);
+    setSelectedLocation(null);
     setCheckedOut(true);
 
     toast({
       title: "Check-out Successful",
-      description: `${selectedStudent} checked out at ${time}.`,
+      description: `${selectedStudent} checked out to ${selectedLocation} at ${time}.`,
     });
   };
+
+  const isStudentCheckedOut = selectedStudent
+  ? activityLog.some(
+      (activity) => activity.student === selectedStudent && activity.type === "check-out"
+    )
+  : false;
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 bg-background">
@@ -138,7 +146,7 @@ export default function Home() {
             </SelectContent>
           </Select>
 
-          {selectedStudent && !checkedOut && (
+          {selectedStudent && !isStudentCheckedOut && (
             <Select onValueChange={setSelectedLocation}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Location" />
@@ -153,17 +161,15 @@ export default function Home() {
             </Select>
           )}
 
-          {selectedStudent && !checkedOut && (
-            <Button onClick={handleCheckOut} className="bg-primary text-background hover:bg-primary-foreground">
-              Check Out <DoorClosed className="ml-2 h-4 w-4" />
-            </Button>
-          )}
-
-          {selectedStudent && checkedOut && (
+          {selectedStudent && isStudentCheckedOut ? (
             <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
-          )}
+             ) : selectedStudent && !isStudentCheckedOut ? (
+            <Button onClick={handleCheckOut} className="bg-primary text-background hover:bg-primary-foreground">
+              Check Out <DoorClosed className="ml-2 h-4 w-4" />
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
 

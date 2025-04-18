@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -80,7 +79,8 @@ export default function Home() {
     };
 
     setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setCheckedOut(true);
+    setSelectedStudent(null);
+    setSelectedLocation(null);
 
     toast({
       title: "Check-in Successful",
@@ -89,7 +89,7 @@ export default function Home() {
   };
 
   const handleCheckOut = () => {
-    if (!selectedStudent) {
+    if (!selectedStudent || checkedOut) {
       toast({
         title: "Error",
         description: "Please select a student.",
@@ -108,8 +108,7 @@ export default function Home() {
     };
 
     setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setSelectedLocation(null);
-    setCheckedOut(false);
+    setCheckedOut(true);
 
     toast({
       title: "Check-out Successful",
@@ -139,7 +138,7 @@ export default function Home() {
             </SelectContent>
           </Select>
 
-          {!checkedOut && (
+          {selectedStudent && !checkedOut && (
             <Select onValueChange={setSelectedLocation}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Location" />
@@ -155,14 +154,14 @@ export default function Home() {
           )}
 
           {selectedStudent && !checkedOut && (
-            <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
-              Check In <DoorOpen className="ml-2 h-4 w-4" />
+            <Button onClick={handleCheckOut} className="bg-primary text-background hover:bg-primary-foreground">
+              Check Out <DoorClosed className="ml-2 h-4 w-4" />
             </Button>
           )}
 
           {selectedStudent && checkedOut && (
-            <Button onClick={handleCheckOut} className="bg-primary text-background hover:bg-primary-foreground">
-              Check Out <DoorClosed className="ml-2 h-4 w-4" />
+            <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
+              Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
           )}
         </CardContent>

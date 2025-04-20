@@ -89,11 +89,11 @@ export default function Home() {
     });
   };
 
-  const handleCheckOut = () => {
-    if (!selectedStudent || !selectedLocation) {
+  const handleCheckOut = (location: string) => {
+    if (!selectedStudent) {
       toast({
         title: "Error",
-        description: "Please select a student and location.",
+        description: "Please select a student.",
         variant: "destructive",
       });
       return;
@@ -103,18 +103,18 @@ export default function Home() {
     const time = now.toLocaleTimeString();
     const newActivity: Activity = {
       student: selectedStudent,
-      location: selectedLocation,
+      location: location,
       time: time,
       type: "check-out",
     };
 
     setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setSelectedLocation(null);
+    setSelectedLocation(location);
     setCheckedOut(true);
 
     toast({
       title: "Check-out Successful",
-      description: `${selectedStudent} checked out to ${selectedLocation} at ${time}.`,
+      description: `${selectedStudent} checked out to ${location} at ${time}.`,
     });
   };
 
@@ -147,18 +147,17 @@ export default function Home() {
           </Select>
 
           {selectedStudent && !isStudentCheckedOut && (
-            <Select onValueChange={setSelectedLocation}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Location" />
-              </SelectTrigger>
-              <SelectContent>
+              <div className="grid grid-cols-3 gap-2">
                 {locations.map((location) => (
-                  <SelectItem key={location} value={location}>
+                  <Button
+                    key={location}
+                    onClick={() => handleCheckOut(location)}
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  >
                     {location}
-                  </SelectItem>
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
           )}
 
           {selectedStudent && isStudentCheckedOut ? (
@@ -166,9 +165,7 @@ export default function Home() {
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
              ) : selectedStudent && !isStudentCheckedOut ? (
-            <Button onClick={handleCheckOut} className="bg-primary text-background hover:bg-primary-foreground">
-              Check Out <DoorClosed className="ml-2 h-4 w-4" />
-            </Button>
+            null
           ) : null}
         </CardContent>
       </Card>

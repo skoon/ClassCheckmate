@@ -8,6 +8,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { CheckCheck, DoorOpen, DoorClosed } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const students = [
   "Alice",
@@ -45,6 +56,8 @@ export default function Home() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [activityLog, setActivityLog] = useState<Activity[]>([]);
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
 
   useEffect(() => {
     const storedActivityLog = localStorage.getItem("activityLog");
@@ -158,6 +171,36 @@ export default function Home() {
       )
     : false;
 
+  const handleSaveActivityLog = () => {
+    if (saveName.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Please enter a name for the saved log.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    localStorage.setItem(`activityLog_${saveName}`, JSON.stringify(activityLog));
+    setOpen(false);
+    setSaveName("");
+
+    toast({
+      title: "Save Successful",
+      description: `Activity log saved as ${saveName}.`,
+    });
+  };
+
+  const handleClearActivityLog = () => {
+    setActivityLog([]);
+    localStorage.removeItem("activityLog");
+    toast({
+      title: "Clear Successful",
+      description: "Activity log cleared.",
+    });
+  };
+
+
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 bg-background">
       <h1 className="text-2xl font-bold mb-4 text-primary">Classroom Checkmate</h1>
@@ -247,9 +290,44 @@ export default function Home() {
         >
           Export as CSV
         </Button>
-
+         <div className="flex justify-between mt-4">
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Save Activity Log</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Save Activity Log</DialogTitle>
+                <DialogDescription>
+                  Enter a name for the saved activity log.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+             
+              <Button onClick={handleSaveActivityLog}>Save</Button>
+            
+            </DialogContent>
+          </Dialog>
+          <Button
+            onClick={handleClearActivityLog}
+            className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
+          >
+            Clear Activity Log
+          </Button>
+        </div>
       </Card>
     </div>
   );
 }
-

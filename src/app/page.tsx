@@ -58,12 +58,21 @@ export default function Home() {
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [savedLogs, setSavedLogs] = useState<string[]>([]);
+  const [selectedLog, setSelectedLog] = useState<string | null>(null);
 
   useEffect(() => {
     const storedActivityLog = localStorage.getItem("activityLog");
     if (storedActivityLog) {
       setActivityLog(JSON.parse(storedActivityLog));
     }
+
+    // Load saved logs from localStorage
+    const savedLogKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith("activityLog_")
+    );
+    const logNames = savedLogKeys.map((key) => key.replace("activityLog_", ""));
+    setSavedLogs(logNames);
   }, []);
 
   useEffect(() => {
@@ -185,6 +194,9 @@ export default function Home() {
     setOpen(false);
     setSaveName("");
 
+    // Update the saved logs list
+    setSavedLogs((prevLogs) => [...prevLogs, saveName]);
+
     toast({
       title: "Save Successful",
       description: `Activity log saved as ${saveName}.`,
@@ -198,6 +210,32 @@ export default function Home() {
       title: "Clear Successful",
       description: "Activity log cleared.",
     });
+  };
+
+  const handleLoadActivityLog = () => {
+    if (!selectedLog) {
+      toast({
+        title: "Error",
+        description: "Please select a log to load.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const loadedLog = localStorage.getItem(`activityLog_${selectedLog}`);
+    if (loadedLog) {
+      setActivityLog(JSON.parse(loadedLog));
+      toast({
+        title: "Load Successful",
+        description: `Activity log ${selectedLog} loaded.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Could not load the selected log.",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -241,6 +279,38 @@ export default function Home() {
             <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="w-full max-w-md mb-4">
+        <CardHeader>
+          <CardTitle>Saved Activity Logs</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col space-y-4">
+          {savedLogs.length === 0 ? (
+            <p className="text-muted-foreground">No saved logs yet.</p>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Select onValueChange={setSelectedLog}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Log" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedLogs.map((log) => (
+                    <SelectItem key={log} value={log}>
+                      {log}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleLoadActivityLog}
+                className="bg-accent text-background hover:bg-accent-foreground"
+              >
+                Load Log
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -36,18 +36,17 @@ const locations = [
 type Activity = {
   student: string;
   location: string;
-  time: string;
-  type: "check-out" | "check-in";
+  checkInTime?: string;
+  checkOutTime: string;
+  duration?: string;
 };
 
 export default function Home() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [activityLog, setActivityLog] = useState<Activity[]>([]);
-  const [checkedOut, setCheckedOut] = useState<boolean>(false);
+  const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load activity log from local storage on component mount
     const storedActivityLog = localStorage.getItem("activityLog");
     if (storedActivityLog) {
       setActivityLog(JSON.parse(storedActivityLog));
@@ -55,39 +54,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Save activity log to local storage whenever it changes
     localStorage.setItem("activityLog", JSON.stringify(activityLog));
   }, [activityLog]);
-
-  const handleCheckIn = () => {
-    if (!selectedStudent) {
-      toast({
-        title: "Error",
-        description: "Please select a student.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const now = new Date();
-    const time = now.toLocaleTimeString();
-    const newActivity: Activity = {
-      student: selectedStudent,
-      location: "Classroom",
-      time: time,
-      type: "check-in",
-    };
-
-    setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setSelectedStudent(null);
-    setSelectedLocation(null);
-    setCheckedOut(false);
-
-    toast({
-      title: "Check-in Successful",
-      description: `${selectedStudent} checked in at ${time}.`,
-    });
-  };
 
   const handleCheckOut = (location: string) => {
     if (!selectedStudent) {
@@ -100,29 +68,95 @@ export default function Home() {
     }
 
     const now = new Date();
-    const time = now.toLocaleTimeString();
+    const checkOutTime = now.toLocaleTimeString();
+    setCheckOutTime(checkOutTime);
+
     const newActivity: Activity = {
       student: selectedStudent,
       location: location,
-      time: time,
-      type: "check-out",
+      checkOutTime: checkOutTime,
+      checkInTime: undefined,
+      duration: undefined,
     };
 
     setActivityLog((prevLog) => [newActivity, ...prevLog]);
-    setSelectedLocation(location);
-    setCheckedOut(true);
 
     toast({
       title: "Check-out Successful",
-      description: `${selectedStudent} checked out to ${location} at ${time}.`,
+      description: `${selectedStudent} checked out to ${location} at ${checkOutTime}.`,
+    });
+  };
+
+  const handleCheckIn = () => {
+    if (!selectedStudent) {
+      toast({
+        title: "Error",
+        description: "Please select a student.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const checkInTime = now.toLocaleTimeString();
+
+    const lastCheckOut = activityLog.find(
+      (activity) => activity.student === selectedStudent && !activity.checkInTime
+    );
+
+    if (lastCheckOut) {
+      const checkOutDate = new Date();
+      checkOutDate.setHours(
+        parseInt(lastCheckOut.checkOutTime.split(":")[0])
+      );
+      checkOutDate.setMinutes(
+        parseInt(lastCheckOut.checkOutTime.split(":")[1])
+      );
+      checkOutDate.setSeconds(
+        parseInt(lastCheckOut.checkOutTime.split(":")[2])
+      );
+
+      const checkInDate = new Date();
+      checkInDate.setHours(parseInt(checkInTime.split(":")[0]));
+      checkInDate.setMinutes(parseInt(checkInTime.split(":")[1]));
+      checkInDate.setSeconds(parseInt(checkInTime.split(":")[2]));
+
+      const durationMs = checkInDate.getTime() - checkOutDate.getTime();
+      const durationMin = Math.round(durationMs / 60000);
+      const duration = `${durationMin} minutes`;
+
+      const updatedActivityLog = activityLog.map((activity) => {
+        if (
+          activity.student === selectedStudent &&
+          activity.checkOutTime === lastCheckOut.checkOutTime &&
+          !activity.checkInTime
+        ) {
+          return {
+            ...activity,
+            checkInTime: checkInTime,
+            duration: duration,
+          };
+        }
+        return activity;
+      });
+
+      setActivityLog(updatedActivityLog);
+    }
+
+    setSelectedStudent(null);
+    setCheckOutTime(null);
+
+    toast({
+      title: "Check-in Successful",
+      description: `${selectedStudent} checked in at ${checkInTime}.`,
     });
   };
 
   const isStudentCheckedOut = selectedStudent
-  ? activityLog.some(
-      (activity) => activity.student === selectedStudent && activity.type === "check-out"
-    )
-  : false;
+    ? activityLog.some(
+        (activity) => activity.student === selectedStudent && !activity.checkInTime
+      )
+    : false;
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 bg-background">
@@ -147,26 +181,24 @@ export default function Home() {
           </Select>
 
           {selectedStudent && !isStudentCheckedOut && (
-              <div className="grid grid-cols-3 gap-2">
-                {locations.map((location) => (
-                  <Button
-                    key={location}
-                    onClick={() => handleCheckOut(location)}
-                    className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  >
-                    {location}
-                  </Button>
-                ))}
-              </div>
+            <div className="grid grid-cols-3 gap-2">
+              {locations.map((location) => (
+                <Button
+                  key={location}
+                  onClick={() => handleCheckOut(location)}
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                >
+                  {location}
+                </Button>
+              ))}
+            </div>
           )}
 
-          {selectedStudent && isStudentCheckedOut ? (
+          {selectedStudent && isStudentCheckedOut && (
             <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
-             ) : selectedStudent && !isStudentCheckedOut ? (
-            null
-          ) : null}
+          )}
         </CardContent>
       </Card>
 
@@ -183,8 +215,8 @@ export default function Home() {
                 activityLog.map((activity, index) => (
                   <div key={index} className="mb-2">
                     <p className="text-sm">
-                      {activity.student} - {activity.type === "check-in" ? "Checked in from" : "Checked out to"}{" "}
-                      {activity.location} at {activity.time}
+                      {activity.student} checked out to {activity.location} at {activity.checkOutTime}
+                      {activity.checkInTime ? ` and checked in at ${activity.checkInTime} for ${activity.duration}` : null}
                     </p>
                     {index !== activityLog.length - 1 && <Separator />}
                   </div>
@@ -200,7 +232,7 @@ export default function Home() {
               activityLog
                 .map(
                   (activity) =>
-                    `${activity.student},${activity.type},${activity.location},${activity.time}`
+                    `${activity.student},${activity.checkInTime ? "check-in" : "check-out"},${activity.location},${activity.checkOutTime}`
                 )
                 .join("\n");
             const blob = new Blob([csvContent], { type: "text/csv" });

@@ -38,7 +38,6 @@ const students = [
 const locations = [
   "Library",
   "Restroom",
-  "Cafeteria",
   "Gym",
   "Office",
   "Other",
@@ -283,38 +282,6 @@ export default function Home() {
         </CardContent>
       </Card>
 
-      <Card className="w-full max-w-md mb-4">
-        <CardHeader>
-          <CardTitle>Saved Activity Logs</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col space-y-4">
-          {savedLogs.length === 0 ? (
-            <p className="text-muted-foreground">No saved logs yet.</p>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Select onValueChange={setSelectedLog}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Log" />
-                </SelectTrigger>
-                <SelectContent>
-                  {savedLogs.map((log) => (
-                    <SelectItem key={log} value={log}>
-                      {log}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleLoadActivityLog}
-                className="bg-accent text-background hover:bg-accent-foreground"
-              >
-                Load Log
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Activity Log</CardTitle>
@@ -397,6 +364,37 @@ export default function Home() {
             Clear Activity Log
           </Button>
         </div>
+      </Card>
+      <Card className="w-full max-w-md mb-4">
+        <CardHeader>
+          <CardTitle>Saved Activity Logs</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col space-y-4">
+          {savedLogs.length === 0 ? (
+            <p className="text-muted-foreground">No saved logs yet.</p>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Select onValueChange={setSelectedLog}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Log" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedLogs.map((log) => (
+                    <SelectItem key={log} value={log}>
+                      {log}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleLoadActivityLog}
+                className="bg-accent text-background hover:bg-accent-foreground"
+              >
+                Load Log
+              </Button>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

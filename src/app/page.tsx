@@ -21,18 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const defaultStudents = [
-  "Alice",
-  "Bob",
-  "Charlie",
-  "David",
-  "Eve",
-  "Fred",
-  "Ginny",
-  "Harriet",
-  "Ileana",
-  "Joseph",
-  "Kevin",
-  "Laura",
+  "Import Students",
 ];
 
 const locations = [
@@ -311,6 +300,15 @@ export default function Home() {
     });
   };
 
+  const handleClearStudentList = () => {
+    setStudents([]);
+    localStorage.removeItem("studentList");
+    toast({
+      title: "Clear Successful",
+      description: "Student List cleared.",
+    });
+  };
+
   const handleLoadActivityLog = () => {
     if (!selectedLog) {
       toast({
@@ -462,6 +460,12 @@ export default function Home() {
             className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
           >
             Clear Activity Log
+          </Button>
+                    <Button
+            onClick={handleClearStudentList}
+            className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
+          >
+            Clear Student Names
           </Button>
         </div>
       </Card>

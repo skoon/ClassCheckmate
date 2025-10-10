@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,7 @@ export default function Home() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [students, setStudents] = useState<string[]>([]);
   const [studentFile, setStudentFile] = useState<File | null>(null);
+  const studentInputRef = useRef<HTMLInputElement | null>(null);
   const [activityLog, setActivityLog] = useState<Activity[]>([]);
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -87,23 +88,15 @@ export default function Home() {
       setStudentFile(event.target.files[0]);
     }
   };
-
-  const handleImportCSV = async () => {
-    if (!studentFile) {
-      toast({
-        title: "Error",
-        description: "Please select a file first.",
-        variant: "destructive",
-      });
+  // Reusable import function that accepts a File and imports student names
+  const importStudentsFromFile = async (file: File) => {
+    if (!file) {
+      toast({ title: "Error", description: "Please select a file first.", variant: "destructive" });
       return;
     }
 
-    if (studentFile.type !== "text/csv") {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload a .csv file.",
-        variant: "destructive",
-      });
+    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+      toast({ title: "Invalid File Type", description: "Please upload a .csv file.", variant: "destructive" });
       return;
     }
 
@@ -115,56 +108,45 @@ export default function Home() {
         if (text) {
           const lines = text.split('\n');
           const newStudents = lines
-            .map(line => line.split(',')[0].trim())
-            .filter(name => name !== "" && name.toLowerCase() !== "student"); // Also filter out header if present
-          
+            .map((line) => line.split(',')[0].trim())
+            .filter((name) => name !== "" && name.toLowerCase() !== "student"); // filter out header if present
+
           if (newStudents.length === 0) {
             toast({
               title: "Empty File or No Names",
               description: "The CSV file is empty or does not contain any student names in the first column.",
-              variant: "default", 
+              variant: "default",
             });
           } else {
             setStudents(newStudents);
-            toast({
-              title: "Import Successful",
-              description: `${newStudents.length} student(s) imported successfully.`,
-              variant: "default",
-            });
+            toast({ title: "Import Successful", description: `${newStudents.length} student(s) imported successfully.`, variant: "default" });
           }
         } else {
-          toast({
-            title: "Error",
-            description: "Could not read the file content.",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Could not read the file content.", variant: "destructive" });
         }
       } catch (error) {
-        toast({
-          title: "File Read Error",
-          description: "Could not process the selected file.", // More generic message for processing
-          variant: "destructive",
-        });
+        toast({ title: "File Read Error", description: "Could not process the selected file.", variant: "destructive" });
       }
     };
 
     reader.onerror = () => {
-      toast({
-        title: "File Read Error",
-        description: "Could not read the selected file.",
-        variant: "destructive",
-      });
+      toast({ title: "File Read Error", description: "Could not read the selected file.", variant: "destructive" });
     };
 
     try {
-      reader.readAsText(studentFile);
+      reader.readAsText(file);
     } catch (error) {
-      toast({
-        title: "File Read Error",
-        description: "Could not read the selected file.",
-        variant: "destructive",
-      });
+      toast({ title: "File Read Error", description: "Could not read the selected file.", variant: "destructive" });
     }
+  };
+
+  // Existing handler kept for possible other inputs
+  const handleImportCSV = async () => {
+    if (!studentFile) {
+      toast({ title: "Error", description: "Please select a file first.", variant: "destructive" });
+      return;
+    }
+    await importStudentsFromFile(studentFile);
   };
 
   const handleCheckOut = (location: string) => {
@@ -357,6 +339,36 @@ export default function Home() {
               ))}
             </SelectContent>
           </Select>
+
+          <div className="flex items-center space-x-2">
+            {/* Hidden file input for importing students */}
+            <input
+              ref={(el) => { studentInputRef.current = el; }}
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                handleFileChange(e as React.ChangeEvent<HTMLInputElement>);
+                if (e.target.files && e.target.files[0]) {
+                  importStudentsFromFile(e.target.files[0]);
+                }
+              }}
+              className="hidden"
+            />
+
+            <Button
+              onClick={() => studentInputRef.current?.click()}
+              className="bg-primary text-primary-foreground hover:bg-primary/80"
+            >
+              Import Students
+            </Button>
+
+            <Button
+              onClick={handleClearStudentList}
+              className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
+            >
+              Clear Names
+            </Button>
+          </div>
 
           {selectedStudent && !isStudentCheckedOut && (
             <div className="grid grid-cols-3 gap-2">

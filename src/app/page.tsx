@@ -20,25 +20,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const students = [
-  "Alice",
-  "Bob",
-  "Charlie",
-  "David",
-  "Eve",
-  "Fred",
-  "Ginny",
-  "Harriet",
-  "Ileana",
-  "Joseph",
-  "Kevin",
-  "Laura",
+const defaultStudents = [
+  "Import Students",
 ];
 
 const locations = [
   "Library",
   "Restroom",
-  "Cafeteria",
   "Gym",
   "Office",
   "Other",
@@ -54,6 +42,8 @@ type Activity = {
 
 export default function Home() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [students, setStudents] = useState<string[]>([]);
+  const [studentFile, setStudentFile] = useState<File | null>(null);
   const [activityLog, setActivityLog] = useState<Activity[]>([]);
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -67,6 +57,13 @@ export default function Home() {
       setActivityLog(JSON.parse(storedActivityLog));
     }
 
+    const storedStudentList = localStorage.getItem("studentList");
+    if (storedStudentList) {
+      setStudents(JSON.parse(storedStudentList));
+    } else {
+      setStudents(defaultStudents); // Load default if nothing in localStorage
+    }
+
     // Load saved logs from localStorage
     const savedLogKeys = Object.keys(localStorage).filter((key) =>
       key.startsWith("activityLog_")
@@ -78,6 +75,97 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("activityLog", JSON.stringify(activityLog));
   }, [activityLog]);
+
+  useEffect(() => {
+    if (students.length > 0) {
+      localStorage.setItem("studentList", JSON.stringify(students));
+    }
+  }, [students]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setStudentFile(event.target.files[0]);
+    }
+  };
+
+  const handleImportCSV = async () => {
+    if (!studentFile) {
+      toast({
+        title: "Error",
+        description: "Please select a file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (studentFile.type !== "text/csv") {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a .csv file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        if (text) {
+          const lines = text.split('\n');
+          const newStudents = lines
+            .map(line => line.split(',')[0].trim())
+            .filter(name => name !== "" && name.toLowerCase() !== "student"); // Also filter out header if present
+          
+          if (newStudents.length === 0) {
+            toast({
+              title: "Empty File or No Names",
+              description: "The CSV file is empty or does not contain any student names in the first column.",
+              variant: "default", 
+            });
+          } else {
+            setStudents(newStudents);
+            toast({
+              title: "Import Successful",
+              description: `${newStudents.length} student(s) imported successfully.`,
+              variant: "default",
+            });
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: "Could not read the file content.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "File Read Error",
+          description: "Could not process the selected file.", // More generic message for processing
+          variant: "destructive",
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      toast({
+        title: "File Read Error",
+        description: "Could not read the selected file.",
+        variant: "destructive",
+      });
+    };
+
+    try {
+      reader.readAsText(studentFile);
+    } catch (error) {
+      toast({
+        title: "File Read Error",
+        description: "Could not read the selected file.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleCheckOut = (location: string) => {
     if (!selectedStudent) {
@@ -212,6 +300,15 @@ export default function Home() {
     });
   };
 
+  const handleClearStudentList = () => {
+    setStudents([]);
+    localStorage.removeItem("studentList");
+    toast({
+      title: "Clear Successful",
+      description: "Student List cleared.",
+    });
+  };
+
   const handleLoadActivityLog = () => {
     if (!selectedLog) {
       toast({
@@ -279,38 +376,6 @@ export default function Home() {
             <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="w-full max-w-md mb-4">
-        <CardHeader>
-          <CardTitle>Saved Activity Logs</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col space-y-4">
-          {savedLogs.length === 0 ? (
-            <p className="text-muted-foreground">No saved logs yet.</p>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Select onValueChange={setSelectedLog}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Log" />
-                </SelectTrigger>
-                <SelectContent>
-                  {savedLogs.map((log) => (
-                    <SelectItem key={log} value={log}>
-                      {log}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleLoadActivityLog}
-                className="bg-accent text-background hover:bg-accent-foreground"
-              >
-                Load Log
-              </Button>
-            </div>
           )}
         </CardContent>
       </Card>
@@ -396,7 +461,57 @@ export default function Home() {
           >
             Clear Activity Log
           </Button>
+                    <Button
+            onClick={handleClearStudentList}
+            className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
+          >
+            Clear Student Names
+          </Button>
         </div>
+      </Card>
+
+      <Card className="w-full max-w-md mb-4">
+        <CardHeader>
+          <CardTitle>Import Activity Log</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col space-y-4">
+          <Input type="file" accept=".csv" className="text-muted-foreground" onChange={handleFileChange} />
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/80" onClick={handleImportCSV}>
+            Import CSV
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full max-w-md mb-4">
+        <CardHeader>
+          <CardTitle>Saved Activity Logs</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col space-y-4">
+          {savedLogs.length === 0 ? (
+            <p className="text-muted-foreground">No saved logs yet.</p>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Select onValueChange={setSelectedLog}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Log" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedLogs.map((log) => (
+                    <SelectItem key={log} value={log}>
+                      {log}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleLoadActivityLog}
+                className="bg-accent text-background hover:bg-accent-foreground"
+              >
+                Load Log
+              </Button>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

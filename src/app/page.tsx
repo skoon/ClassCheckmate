@@ -83,30 +83,6 @@ function formatIsoTime(iso?: string) {
 }
 
 export default function Home() {
-  const { students, studentFile, handleFileChange, handleImportCSV } = useStudentList();
-  const {
-    activityLog,
-    setActivityLog,
-    handleCheckOut: hookHandleCheckOut,
-    handleCheckIn: hookHandleCheckIn,
-    isStudentCheckedOut: hookIsStudentCheckedOut
-  } = useActivityLog();
-
-  // Use the saved logs hook
-  const {
-    open,
-    setOpen,
-    saveName,
-    setSaveName,
-    savedLogs,
-    // setSavedLogs, // Not directly used from page, managed by hook
-    selectedLog,
-    setSelectedLog,
-    handleSaveActivityLog,
-    handleClearActivityLog, // This now comes from useSavedLogs
-    handleLoadActivityLog
-  } = useSavedLogs(activityLog, setActivityLog); // Pass current log and its setter
-
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [students, setStudents] = useState<string[]>([]);
   const [studentFile, setStudentFile] = useState<File | null>(null);
@@ -276,7 +252,7 @@ export default function Home() {
 
     toast({
       title: "Check-out Successful",
-      description: `${selectedStudent} checked out to ${location} at ${checkOutTime}.`,
+      description: `${selectedStudent} checked out to ${location} at ${new Date(checkOutIso).toLocaleTimeString()}.`,
     });
   };
 
@@ -443,12 +419,12 @@ export default function Home() {
             </SelectContent>
           </Select>
 
-          {selectedStudent && !isStudentCurrentlyCheckedOut && (
+          {selectedStudent && !isStudentCheckedOut && (
             <div className="grid grid-cols-3 gap-2">
               {locations.map((location) => (
                 <Button
                   key={location}
-                  onClick={() => currentHandleCheckOut(location)}
+                  onClick={() => handleCheckOut(location)}
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   {location}
@@ -457,8 +433,8 @@ export default function Home() {
             </div>
           )}
 
-          {selectedStudent && isStudentCurrentlyCheckedOut && (
-            <Button onClick={currentHandleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
+          {selectedStudent && isStudentCheckedOut && (
+            <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
           )}

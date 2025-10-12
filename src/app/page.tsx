@@ -33,12 +33,54 @@ const locations = [
 ];
 
 type Activity = {
+  id: string;
   student: string;
   location: string;
   checkInTime?: string;
   checkOutTime: string;
   duration?: string;
 };
+
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function parseTimeStringToISOString(timeStr?: string): string | undefined {
+  if (!timeStr) return undefined;
+  // If it already looks like ISO and parses, return normalized ISO
+  if (/\d{4}-\d{2}-\d{2}T/.test(timeStr)) {
+    const d = new Date(timeStr);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+
+  const parsed = Date.parse(timeStr);
+  if (!isNaN(parsed)) return new Date(parsed).toISOString();
+
+  // Try to parse time-only strings like "10:23:45" or "1:05 PM"
+  const m = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/);
+  if (m) {
+    let hour = parseInt(m[1], 10);
+    const minute = parseInt(m[2], 10);
+    const second = m[3] ? parseInt(m[3], 10) : 0;
+    const ampm = m[4];
+    if (ampm) {
+      if (/pm/i.test(ampm) && hour < 12) hour += 12;
+      if (/am/i.test(ampm) && hour === 12) hour = 0;
+    }
+    const d = new Date();
+    d.setHours(hour, minute, second, 0);
+    return d.toISOString();
+  }
+
+  return undefined;
+}
+
+function formatIsoTime(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString();
+}
 
 export default function Home() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
@@ -54,7 +96,23 @@ export default function Home() {
   useEffect(() => {
     const storedActivityLog = localStorage.getItem("activityLog");
     if (storedActivityLog) {
-      setActivityLog(JSON.parse(storedActivityLog));
+      // Backfill ids for any legacy activities that don't have them
+      try {
+        const parsed: Activity[] = JSON.parse(storedActivityLog);
+        const withIdsAndIso = parsed.map((a) => {
+          const checkOutIso = parseTimeStringToISOString(a.checkOutTime);
+          const checkInIso = parseTimeStringToISOString(a.checkInTime);
+          return {
+            ...a,
+            id: (a as any).id || generateId(),
+            checkOutTime: checkOutIso || a.checkOutTime,
+            checkInTime: checkInIso || a.checkInTime,
+          } as Activity;
+        });
+        setActivityLog(withIdsAndIso);
+      } catch (e) {
+        setActivityLog([]);
+      }
     }
 
     const storedStudentList = localStorage.getItem("studentList");
@@ -177,14 +235,15 @@ export default function Home() {
       return;
     }
 
-    const now = new Date();
-    const checkOutTime = now.toLocaleTimeString();
-    setCheckOutTime(checkOutTime);
+  const now = new Date();
+  const checkOutIso = now.toISOString();
+  setCheckOutTime(checkOutIso);
 
     const newActivity: Activity = {
+      id: generateId(),
       student: selectedStudent,
       location: location,
-      checkOutTime: checkOutTime,
+      checkOutTime: checkOutIso,
       checkInTime: undefined,
       duration: undefined,
     };
@@ -207,43 +266,29 @@ export default function Home() {
       return;
     }
 
-    const now = new Date();
-    const checkInTime = now.toLocaleTimeString();
+  const now = new Date();
+  const checkInIso = now.toISOString();
 
-    const lastCheckOut = activityLog.find(
+    // Find the most recent activity for the selected student that has no checkInTime
+    const lastCheckOut = [...activityLog].find(
       (activity) => activity.student === selectedStudent && !activity.checkInTime
     );
 
     if (lastCheckOut) {
-      const checkOutDate = new Date();
-      checkOutDate.setHours(
-        parseInt(lastCheckOut.checkOutTime.split(":")[0])
-      );
-      checkOutDate.setMinutes(
-        parseInt(lastCheckOut.checkOutTime.split(":")[1])
-      );
-      checkOutDate.setSeconds(
-        parseInt(lastCheckOut.checkOutTime.split(":")[2])
-      );
-
-      const checkInDate = new Date();
-      checkInDate.setHours(parseInt(checkInTime.split(":")[0]));
-      checkInDate.setMinutes(parseInt(checkInTime.split(":")[1]));
-      checkInDate.setSeconds(parseInt(checkInTime.split(":")[2]));
-
-      const durationMs = checkInDate.getTime() - checkOutDate.getTime();
+      // Compute duration from ISO timestamps (or fallback to parsing legacy)
+      const coIso = parseTimeStringToISOString(lastCheckOut.checkOutTime) || lastCheckOut.checkOutTime;
+      const ciIso = checkInIso;
+      const coDate = new Date(coIso);
+      const ciDate = new Date(ciIso);
+      const durationMs = ciDate.getTime() - coDate.getTime();
       const durationMin = Math.round(durationMs / 60000);
       const duration = `${durationMin} minutes`;
 
       const updatedActivityLog = activityLog.map((activity) => {
-        if (
-          activity.student === selectedStudent &&
-          activity.checkOutTime === lastCheckOut.checkOutTime &&
-          !activity.checkInTime
-        ) {
+        if (activity.id === lastCheckOut.id) {
           return {
             ...activity,
-            checkInTime: checkInTime,
+            checkInTime: checkInIso,
             duration: duration,
           };
         }
@@ -258,7 +303,7 @@ export default function Home() {
 
     toast({
       title: "Check-in Successful",
-      description: `${selectedStudent} checked in at ${checkInTime}.`,
+      description: `${selectedStudent} checked in at ${new Date(checkInIso).toLocaleTimeString()}.`,
     });
   };
 
@@ -321,7 +366,23 @@ export default function Home() {
 
     const loadedLog = localStorage.getItem(`activityLog_${selectedLog}`);
     if (loadedLog) {
-      setActivityLog(JSON.parse(loadedLog));
+      try {
+        const parsed: Activity[] = JSON.parse(loadedLog);
+        const normalized = parsed.map((a) => ({
+          ...a,
+          id: (a as any).id || generateId(),
+          checkOutTime: parseTimeStringToISOString(a.checkOutTime) || a.checkOutTime,
+          checkInTime: parseTimeStringToISOString(a.checkInTime) || a.checkInTime,
+        }));
+        setActivityLog(normalized as Activity[]);
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Could not parse the selected log.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "Load Successful",
         description: `Activity log ${selectedLog} loaded.`,
@@ -391,10 +452,10 @@ export default function Home() {
                 <p className="text-muted-foreground">No activity yet.</p>
               ) : (
                 activityLog.map((activity, index) => (
-                  <div key={index} className="mb-2">
+                  <div key={activity.id} className="mb-2">
                     <p className="text-sm">
-                      {activity.student} checked out to {activity.location} at {activity.checkOutTime}
-                      {activity.checkInTime ? ` and checked in at ${activity.checkInTime} for ${activity.duration}` : null}
+                      {activity.student} checked out to {activity.location} at {formatIsoTime(activity.checkOutTime)}
+                      {activity.checkInTime ? ` and checked in at ${formatIsoTime(activity.checkInTime)} for ${activity.duration}` : null}
                     </p>
                     {index !== activityLog.length - 1 && <Separator />}
                   </div>
@@ -408,10 +469,10 @@ export default function Home() {
             const csvContent =
               "Student,Type,Location,Time\n" +
               activityLog
-                .map(
-                  (activity) =>
-                    `${activity.student},${activity.checkInTime ? "check-in" : "check-out"},${activity.location},${activity.checkOutTime}`
-                )
+                .map((activity) => {
+                  const time = activity.checkInTime ? formatIsoTime(activity.checkInTime) : formatIsoTime(activity.checkOutTime);
+                  return `${activity.student},${activity.checkInTime ? "check-in" : "check-out"},${activity.location},${time}`;
+                })
                 .join("\n");
             const blob = new Blob([csvContent], { type: "text/csv" });
             const url = URL.createObjectURL(blob);

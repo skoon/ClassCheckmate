@@ -83,6 +83,30 @@ function formatIsoTime(iso?: string) {
 }
 
 export default function Home() {
+  const { students, studentFile, handleFileChange, handleImportCSV } = useStudentList();
+  const {
+    activityLog,
+    setActivityLog,
+    handleCheckOut: hookHandleCheckOut,
+    handleCheckIn: hookHandleCheckIn,
+    isStudentCheckedOut: hookIsStudentCheckedOut
+  } = useActivityLog();
+
+  // Use the saved logs hook
+  const {
+    open,
+    setOpen,
+    saveName,
+    setSaveName,
+    savedLogs,
+    // setSavedLogs, // Not directly used from page, managed by hook
+    selectedLog,
+    setSelectedLog,
+    handleSaveActivityLog,
+    handleClearActivityLog, // This now comes from useSavedLogs
+    handleLoadActivityLog
+  } = useSavedLogs(activityLog, setActivityLog); // Pass current log and its setter
+
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [students, setStudents] = useState<string[]>([]);
   const [studentFile, setStudentFile] = useState<File | null>(null);
@@ -406,7 +430,7 @@ export default function Home() {
           <CardTitle>Student Check-in/Check-out</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4">
-          <Select onValueChange={setSelectedStudent}>
+          <Select onValueChange={setSelectedStudent} value={selectedStudent || ""}>
             <SelectTrigger>
               <SelectValue placeholder="Select Student" />
             </SelectTrigger>
@@ -419,12 +443,12 @@ export default function Home() {
             </SelectContent>
           </Select>
 
-          {selectedStudent && !isStudentCheckedOut && (
+          {selectedStudent && !isStudentCurrentlyCheckedOut && (
             <div className="grid grid-cols-3 gap-2">
               {locations.map((location) => (
                 <Button
                   key={location}
-                  onClick={() => handleCheckOut(location)}
+                  onClick={() => currentHandleCheckOut(location)}
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   {location}
@@ -433,8 +457,8 @@ export default function Home() {
             </div>
           )}
 
-          {selectedStudent && isStudentCheckedOut && (
-            <Button onClick={handleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
+          {selectedStudent && isStudentCurrentlyCheckedOut && (
+            <Button onClick={currentHandleCheckIn} className="bg-accent text-background hover:bg-accent-foreground">
               Check In <DoorOpen className="ml-2 h-4 w-4" />
             </Button>
           )}
@@ -487,7 +511,7 @@ export default function Home() {
           Export as CSV
         </Button>
          <div className="flex justify-between mt-4">
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={setOpen}> {/* Uses open, setOpen from useSavedLogs */}
             <DialogTrigger asChild>
               <Button variant="outline">Save Activity Log</Button>
             </DialogTrigger>
@@ -505,28 +529,22 @@ export default function Home() {
                   </Label>
                   <Input
                     id="name"
-                    value={saveName}
-                    onChange={(e) => setSaveName(e.target.value)}
+                    value={saveName} /* Uses saveName from useSavedLogs */
+                    onChange={(e) => setSaveName(e.target.value)} /* Uses setSaveName from useSavedLogs */
                     className="col-span-3"
                   />
                 </div>
               </div>
              
-              <Button onClick={handleSaveActivityLog}>Save</Button>
+              <Button onClick={handleSaveActivityLog}>Save</Button> {/* Uses handleSaveActivityLog from useSavedLogs */}
             
             </DialogContent>
           </Dialog>
           <Button
-            onClick={handleClearActivityLog}
+            onClick={handleClearActivityLog} /* Uses handleClearActivityLog from useSavedLogs */
             className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
           >
             Clear Activity Log
-          </Button>
-                    <Button
-            onClick={handleClearStudentList}
-            className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
-          >
-            Clear Student Names
           </Button>
         </div>
       </Card>
@@ -548,16 +566,16 @@ export default function Home() {
           <CardTitle>Saved Activity Logs</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4">
-          {savedLogs.length === 0 ? (
+          {savedLogs.length === 0 ? ( /* Uses savedLogs from useSavedLogs */
             <p className="text-muted-foreground">No saved logs yet.</p>
           ) : (
             <div className="flex items-center space-x-2">
-              <Select onValueChange={setSelectedLog}>
+              <Select onValueChange={setSelectedLog}> {/* Uses setSelectedLog from useSavedLogs */}
                 <SelectTrigger>
                   <SelectValue placeholder="Select Log" />
                 </SelectTrigger>
                 <SelectContent>
-                  {savedLogs.map((log) => (
+                  {savedLogs.map((log) => ( /* Uses savedLogs from useSavedLogs */
                     <SelectItem key={log} value={log}>
                       {log}
                     </SelectItem>
@@ -565,7 +583,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
               <Button
-                onClick={handleLoadActivityLog}
+                onClick={handleLoadActivityLog} /* Uses handleLoadActivityLog from useSavedLogs */
                 className="bg-accent text-background hover:bg-accent-foreground"
               >
                 Load Log

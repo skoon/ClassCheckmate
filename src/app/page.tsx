@@ -48,6 +48,7 @@ export default function Home() {
   const [activityLog, setActivityLog] = useState<Activity[]>([]);
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [clearStudentsOpen, setClearStudentsOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [savedLogs, setSavedLogs] = useState<string[]>([]);
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
@@ -291,6 +292,11 @@ export default function Home() {
     });
   };
 
+  const handleConfirmClearStudentList = () => {
+    handleClearStudentList();
+    setClearStudentsOpen(false);
+  };
+
   const handleLoadActivityLog = () => {
     if (!selectedLog) {
       toast({
@@ -362,12 +368,29 @@ export default function Home() {
               Import Students
             </Button>
 
-            <Button
-              onClick={handleClearStudentList}
-              className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
-            >
-              Clear Names
-            </Button>
+            <Dialog open={clearStudentsOpen} onOpenChange={setClearStudentsOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground">
+                  Clear Names
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Confirm Clear Student List</DialogTitle>
+                  <DialogDescription>
+                    This will permanently remove all student names from the app and local storage. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setClearStudentsOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-destructive text-destructive-foreground" onClick={handleConfirmClearStudentList}>
+                    Confirm Clear
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {selectedStudent && !isStudentCheckedOut && (
@@ -473,12 +496,29 @@ export default function Home() {
           >
             Clear Activity Log
           </Button>
-                    <Button
-            onClick={handleClearStudentList}
-            className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground"
-          >
-            Clear Student Names
-          </Button>
+                    <Dialog open={clearStudentsOpen} onOpenChange={setClearStudentsOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-destructive hover:bg-destructive-foreground text-destructive-foreground">
+                          Clear Student Names
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Confirm Clear Student List</DialogTitle>
+                          <DialogDescription>
+                            This will permanently remove all student names from the app and local storage. This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setClearStudentsOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button className="bg-destructive text-destructive-foreground" onClick={handleConfirmClearStudentList}>
+                            Confirm Clear
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
         </div>
       </Card>
 

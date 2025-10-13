@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { CheckCheck, DoorOpen, DoorClosed } from "lucide-react";
+import { parseStudentCSV } from '@/lib/csv';
 import {
   Dialog,
   DialogContent,
@@ -107,10 +108,7 @@ export default function Home() {
       try {
         const text = e.target?.result as string;
         if (text) {
-          const lines = text.split('\n');
-          const newStudents = lines
-            .map((line) => line.split(',')[0].trim())
-            .filter((name) => name !== "" && name.toLowerCase() !== "student"); // filter out header if present
+          const newStudents = parseStudentCSV(text);
 
           if (newStudents.length === 0) {
             toast({

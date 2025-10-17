@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Autocomplete from "@/components/ui/autocomplete";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -93,6 +94,7 @@ export default function Home() {
   const [saveName, setSaveName] = useState("");
   const [savedLogs, setSavedLogs] = useState<string[]>([]);
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const storedActivityLog = localStorage.getItem("activityLog");
@@ -452,18 +454,30 @@ export default function Home() {
           <CardTitle>Student Check-in/Check-out</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4">
-          <Select onValueChange={setSelectedStudent} value={selectedStudent || ""}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Student" />
-            </SelectTrigger>
-            <SelectContent>
-              {students.map((student) => (
-                <SelectItem key={student} value={student}>
-                  {student}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Autocomplete
+              items={students}
+              value={selectedStudent}
+              onChange={(v) => setSelectedStudent(v)}
+              onSelect={(v) => { setSelectedStudent(v); setSearchTerm(v); }}
+              placeholder="Type or select student"
+            />
+            {/* Small fallback select for accessibility */}
+            <div className="mt-2">
+              <Select onValueChange={(v) => { setSelectedStudent(v); setSearchTerm(v); }} value={selectedStudent || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((student) => (
+                    <SelectItem key={student} value={student}>
+                      {student}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {/* Hidden file input for student import and visible button to trigger it */}
           <input
